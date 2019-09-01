@@ -1,0 +1,74 @@
+# #######################
+# Farthest Distributed Centroids Function used in K-Means #
+# W.L.Chen  June, 2019
+# Developed based on Optimizing K-Means by Fixing Initial Cluster Centers, Neeti AroraÈ¦ and Mahesh MotwaniÈ¦, 2017 | 
+# International Journal of Current Engineering and Technology, Vol.4, No.3 (June 2014)
+# https://pdfs.semanticscholar.org/a217/3b93f2fdec684bcfeb0991a571aa866f105f.pdf
+#
+# Description:
+# One of disadvantages of the K-Means algorithm is that different inital centroids generating processes have a strong impact 
+# on final results. Thus the performance of K-means may depend on the initial guess of centers. Here, based on the paper, 
+# following code will generate K Farthest Distributed Initial Centroids, which can be used in standard K-Means algorithm
+# to generate an optimized and stable result
+##########################
+
+import pandas as pd
+import numpy as np
+import math
+from sklearn.cluster import KMeans
+
+## Define Functions Start ##
+def setInitialCentroids(data, k):
+
+    n = len(data)
+    x = math.floor(n / k)
+
+    dm = pd.DataFrame(distance_matrix(data.values, data.values), index=data.index, columns=data.index)
+    dm['sum'] = dm.sum(axis=1)
+    sdm = dm.sort_values(['sum'], ascending=[False])
+    P_SD = sdm.index.to_numpy()
+
+    ck = 1
+    ic = 0
+    S = []
+
+    while (ck <= k):
+        S.append(P_SD[ic])
+        ck = ck + 1
+        ic = int(ic + x)
+
+    rowsList = []
+    for index, rows in data.iterrows():
+        rowsList.append([rows.x, rows.y])
+
+    finalList = []
+    for i in S:
+        finalList.append(rowsList[i])
+ 
+    return np.array(finalList)
+## Define FunctionsEnd ##
+
+
+# Example
+
+## Choose K and Data ##
+K = 5
+data = pd.DataFrame(np.random.uniform(0,10,size=(500, 2)), columns=list('xy'))
+
+initC = setInitialCentroids(data, K)
+print(initC)
+
+## Run K-Means
+kmeans = KMeans(K, init=initC, n_init=1).fit(data) 
+data['cluster'] = kmeans.predict(data)
+centers = np.array(kmeans.cluster_centers_)
+ 
+## Plot the cluster
+fig = plt.figure(figsize = (10,10))
+ax = fig.add_subplot(111)
+scatter = ax.scatter(data['x'], data['y'], c = data['cluster'], s=50)
+ax.set_title('Table 1 - K-Means Clustering K=5')
+ax.set_xlabel('Feature 1 - x')
+ax.set_ylabel('Feature 2 - y')
+plt.scatter(centers[:,0], centers[:,1], marker="x", color='r')
+plt.show()    
